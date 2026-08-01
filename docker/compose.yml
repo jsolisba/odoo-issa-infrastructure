@@ -1,45 +1,62 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  odooweb:
-    image: ghcr.io/jsolisba/odoo:latest
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
+
+  odoo:
+
+    image: ghcr.io/jsolisba/odoo:${ODOO_IMAGE_TAG}
+
     depends_on:
-      - dbodoo
+      - db
+
     ports:
-      - '8070:8069'
-      - '7788:7788'
+      - "${ODOO_PORT}:8069"
+
     secrets:
       - postgresql_password
+
     networks:
-      - odoo_backend
-      - odoo_frontend
+      - backend
+      - frontend
+      
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://              localhost:8069/web/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
     volumes:
       - odoo-addons:/mnt/extra-addons
       - odoo-web-data:/var/lib/odoo
       - odoo-filestore:/var/lib/odoo/.local/share/Odoo/filestore
-      - ../../config/prod.conf:/etc/odoo/odoo.conf:ro
+      - ../../config/${ODOO_CONFIG}:/etc/odoo/odoo.conf:ro
 
-  dbodoo:
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  db:
+
     image: custom-postgres:15.10
-    ports:
-      - '5432:5432'
+
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgresql_password
       POSTGRES_DB: postgres
       POSTGRES_USER: odoo
-#      PGDATA: /var/lib/postgresql/data/pgdata
       PGDATA: /var/lib/postgresql/data
+
     volumes:
-#     - odoo-db-data:/var/lib/postgresql/data/pgdata
       - odoo-db-data:/var/lib/postgresql/data
+
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
     secrets:
       - postgresql_password
+
     networks:
-      - odoo_backend
+      - backend 
 
     deploy:
       replicas: 1
@@ -47,20 +64,37 @@ services:
         condition: on-failure
 
 volumes:
+
   odoo-web-data:
     external: true
+    name: ${ODOO_WEB_VOLUME}
+
   odoo-db-data:
     external: true
+    name: ${ODOO_DB_VOLUME}
+
   odoo-addons:
     external: true
+    name: ${ODOO_ADDONS_VOLUME}
+
   odoo-filestore:
     external: true
+    name: ${ODOO_FILESTORE_VOLUME}
+
 secrets:
+
   postgresql_password:
+
     external: true
 
+    name: ${POSTGRES_SECRET}
+
 networks:
-  odoo_frontend:
-    driver: overlay
-  odoo_backend:
-    driver: overlay
+
+  backend:
+    external: true
+    name: ${BACKEND_NETWORK}
+
+  frontend:
+    external: true
+    name: ${FRONTEND_NETWORK}
