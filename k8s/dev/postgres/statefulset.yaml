@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: odoo-dev-postgres
+  namespace: dev
+  labels:
+    app: odoo-dev-postgres
+spec:
+  serviceName: odoo-dev-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo-dev-postgres
+  template:
+    metadata:
+      labels:
+        app: odoo-dev-postgres
+    spec:
+      imagePullSecrets:
+        - name: ghcr-odoo-pull
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: ghcr.io/jsolisba/odoo-postgres@sha256:f21bb47bcbc9c570860baef27f436dddbb9137703317afcd2a9ab143a614c98e
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data
+            - name: POSTGRES_USER
+              value: odoo
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_PASSWORD_FILE
+              value: /run/secrets/postgresql_password
+          ports:
+            - name: postgres
+              containerPort: 5432
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - pg_isready -U odoo -d postgres
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - pg_isready -U odoo -d postgres
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            - name: postgres-password
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: odoo-dev-postgres-pvc
+        - name: postgres-password
+          secret:
+            secretName: odoo-dev-postgres-auth
+            items:
+              - key: postgresql_password
+                path: postgresql_password
