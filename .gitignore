@@ -1,0 +1,24 @@
+# Backups y archivos temporales
+*.bak
+*.before-*
+*.backup
+*.tmp
+*.swp
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Variables de entorno locales con secretos
+.env
+.env.*
+!.env.example
+
+/docker/dev.env
+/docker/prod.env
+/docker/*.env
+/scripts/*.pre-*
+/scripts/*.after-*
