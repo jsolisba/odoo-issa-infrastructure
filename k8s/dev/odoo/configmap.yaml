@@ -1,0 +1,45 @@
+apiVersion: v1
+data:
+  start-odoo.sh: |
+    #!/bin/sh
+    set -eu
+    umask 077
+
+    python3 - <<'PY'
+    from pathlib import Path
+    import configparser
+    import os
+
+    secret_dir = Path("/run/secrets")
+    db_password = (secret_dir / "postgresql_password").read_text().rstrip("\n")
+    admin_password = (secret_dir / "odoo_admin_password").read_text().rstrip("\n")
+
+    if not db_password or not admin_password:
+        raise SystemExit("ERROR: Secret vacío")
+
+    config = configparser.ConfigParser(interpolation=None)
+    config["options"] = {
+        "db_host": "odoo-dev-postgres",
+        "db_port": "5432",
+        "db_user": "odoo",
+        "db_password": db_password,
+        "admin_passwd": admin_password,
+        "data_dir": "/var/lib/odoo",
+        "addons_path": "/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons",
+    }
+
+    with open("/run/odoo-config/odoo-dev.conf", "w") as f:
+        config.write(f)
+
+    os.chmod("/run/odoo-config/odoo-dev.conf", 0o600)
+    PY
+
+    mkdir -p /var/lib/odoo/.local/share/Odoo/filestore
+    mkdir -p /var/lib/odoo/.local/share/Odoo/web/assets
+
+    exec odoo -c /run/odoo-config/odoo-dev.conf
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: odoo-dev-start
+  namespace: dev

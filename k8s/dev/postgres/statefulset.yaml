@@ -16,6 +16,7 @@ spec:
       labels:
         app: odoo-dev-postgres
     spec:
+      automountServiceAccountToken: false
       imagePullSecrets:
         - name: ghcr-odoo-pull
       securityContext:

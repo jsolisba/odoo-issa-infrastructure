@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo-dev
+  namespace: dev
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: odoo-dev
+  template:
+    metadata:
+      labels:
+        app: odoo-dev
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+      - name: ghcr-odoo-pull
+      containers:
+      - name: odoo
+        image: ghcr.io/jsolisba/odoo:18
+        command:
+        - /bin/sh
+        - /opt/odoo/start-odoo.sh
+        ports:
+        - name: http
+          containerPort: 8069
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: '2'
+            memory: 2Gi
+        volumeMounts:
+        - name: filestore
+          mountPath: /var/lib/odoo
+        - name: postgres-password
+          mountPath: /run/secrets/postgresql_password
+          subPath: postgresql_password
+          readOnly: true
+        - name: admin-password
+          mountPath: /run/secrets/odoo_admin_password
+          subPath: odoo_admin_password
+          readOnly: true
+        - name: start-script
+          mountPath: /opt/odoo/start-odoo.sh
+          subPath: start-odoo.sh
+          readOnly: true
+        - name: odoo-config
+          mountPath: /run/odoo-config
+      volumes:
+      - name: filestore
+        persistentVolumeClaim:
+          claimName: odoo-dev-filestore-pvc
+      - name: postgres-password
+        secret:
+          secretName: odoo-dev-postgres-auth
+      - name: admin-password
+        secret:
+          secretName: odoo-dev-admin-auth
+      - name: start-script
+        configMap:
+          name: odoo-dev-start
+          defaultMode: 292
+      - name: odoo-config
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Mi
