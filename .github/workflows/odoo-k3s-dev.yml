@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - develop
+      - recovery/odoo-infra-20261109-052855
     paths:
       - docker/k3s-dev/**
       - .github/workflows/odoo-k3s-dev.yml
