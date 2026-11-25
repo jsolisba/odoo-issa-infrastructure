@@ -20,7 +20,7 @@ spec:
       - name: ghcr-odoo-pull
       containers:
       - name: odoo
-        image: ghcr.io/jsolisba/odoo:18
+        image: ghcr.io/jsolisba/odoo-k3s-dev:sha-66575b31f82ad4ab1031f1c318203869727ef9c7
         command:
         - /bin/sh
         - /opt/odoo/start-odoo.sh
